@@ -18,6 +18,23 @@ def parse(line):
     tokens = shlex.split(line)
     return tokens, background
 
+def run_external(tokens, background):
+    pid = os.fork()
+    
+    if pid == 0:
+        try:
+            os.execvp(tokens[0], tokens)
+        except FileNotFoundError:
+            print(f"myshell: {tokens[0]}: command not found")
+        finally:
+            os._exit(127)
+    
+    if background:
+        pid, status = os.waitpid(pid, 0)
+        print(f"[debug] child {pid} exited with {os.waitstatus_to_exitcode(status)}")
+    else:
+        os.waitpid(pid, 0)
+
 def handle_cd(args):
     if not args:
         print("myshell: cd: missing argument")
@@ -63,7 +80,7 @@ def main():
         elif cmd in BUILTINS:
             print(f"myshell: under construction, coming soon")
         else:
-            print(f"(external: {tokens}) background={background}")
+            run_external(tokens, background)
         
 
 if __name__ == "__main__":
